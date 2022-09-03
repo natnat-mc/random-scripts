@@ -1,0 +1,29 @@
+#!/bin/bash
+. "$(dirname "$(realpath "$0")")"/core.sh
+
+needroot
+if [ ! -d "$BTRFS_DIR" ] || ! mountpoint -q "$BTRFS_DIR" ; then
+	error 'Need to set $BTRFS_DIR to the root btrfs mount to work'
+fi
+
+pushd "$BTRFS_DIR" >/dev/null
+date=$(date +'%Y-%m-%d')
+
+echo
+status "Taking snapshots for %s" $date
+
+for subvolume in @*; do
+	if [ ! -d "snapshots/$subvolume" ]; then
+		status "Subvolume %s doesnt have a snapshot folder, creating one..." "$subvolume"
+		mkdir "snapshots/$subvolume"
+	fi
+	snapshot="snapshots/$subvolume/$date"
+	if [ -d "$snapshot" ]; then
+		status "Subvolume %s already has a snapshot taken today, skipping..." "$subvolume"
+		continue
+	fi
+	status "Taking snapshot of subvolume %s..." "$subvolume"
+	btrfs subvolume snapshot -r "$subvolume" "$snapshot"
+done
+
+status "Finished taking snapshots for %s" $date
